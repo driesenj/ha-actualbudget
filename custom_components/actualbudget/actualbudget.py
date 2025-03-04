@@ -14,6 +14,8 @@ from actual.exceptions import (
 from actual.queries import get_accounts, get_account, get_budgets, get_category
 from requests.exceptions import ConnectionError, SSLError
 import datetime
+import pathlib
+import tempfile
 
 
 _LOGGER = logging.getLogger(__name__)
@@ -92,6 +94,7 @@ class ActualBudget:
             cert=self.cert,
             encryption_password=self.encrypt_password,
             file=self.file,
+            data_dir=pathlib.Path(tempfile.gettempdir())
         )
         actual.__enter__()
         result = actual.validate()
@@ -170,6 +173,14 @@ class ActualBudget:
         budget.amounts = sorted(budget.amounts, key=lambda x: x.month)
         budget.balance = get_category(session, budget_name).balance
         return budget
+
+    async def sync_accounts(self):
+        """Sync accounts."""
+        return await self.hass.async_add_executor_job(self.sync_accounts_sync)
+
+    def sync_accounts_sync(self):
+        self.actual.run_bank_sync()
+
 
     async def test_connection(self):
         return await self.hass.async_add_executor_job(self.test_connection_sync)
