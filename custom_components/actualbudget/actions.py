@@ -12,7 +12,7 @@ from homeassistant.core import (
 )
 from homeassistant.config_entries import ConfigEntry, ConfigEntryState
 from homeassistant.exceptions import ServiceValidationError
-from homeassistant.helpers import entity_registry
+from homeassistant.helpers.entity_registry import (async_entries_for_config_entry, async_get)
 from homeassistant.helpers.entity_component import async_update_entity
 
 from .actualbudget import ActualBudget
@@ -54,18 +54,29 @@ def register_actions(hass: HomeAssistant) -> None:
             }
         )
     )
+    hass.services.async_register(
+        DOMAIN,
+        "budget_sync",
+        handle_budget_sync,
+        schema=vol.Schema(
+            {
+                vol.Required(ATTR_CONFIG_ENTRY_ID): str,
+            }
+        )
+    )
 
 
 @callback
 async def handle_bank_sync(call: ServiceCall) -> ServiceResponse:
-    """Handle the back_sync service action call."""
-    _LOGGER.info(call.data)
+    """Handle the bank_sync service action call."""
     api = get_actualbudget_client(call.hass, call.data[ATTR_CONFIG_ENTRY_ID])
 
     await api.run_bank_sync()
 
+    entity_registry = async_get(call.hass)
+
     # Update all account and budget entities
-    integration_entities = entity_registry.async_entries_for_config_entry(
+    integration_entities = async_entries_for_config_entry(
         entity_registry, call.data[ATTR_CONFIG_ENTRY_ID])
 
     tasks = [
@@ -77,15 +88,16 @@ async def handle_bank_sync(call: ServiceCall) -> ServiceResponse:
 
 
 @callback
-async def handle_update_budget(call: ServiceCall) -> ServiceResponse:
-    """Handle the back_sync service action call."""
-    _LOGGER.info(call.data)
+async def handle_budget_sync(call: ServiceCall) -> ServiceResponse:
+    """Handle the budget_sync service action call."""
     api = get_actualbudget_client(call.hass, call.data[ATTR_CONFIG_ENTRY_ID])
 
     await api.run_budget_sync()
 
+    entity_registry = async_get(call.hass)
+
     # Update all account and budget entities
-    integration_entities = entity_registry.async_entries_for_config_entry(
+    integration_entities = async_entries_for_config_entry(
         entity_registry, call.data[ATTR_CONFIG_ENTRY_ID])
 
     tasks = [
