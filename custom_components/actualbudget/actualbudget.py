@@ -143,13 +143,15 @@ class ActualBudget:
                 if not budget_raw.category:
                     continue
                 category = str(budget_raw.category.name)
-                amount = None if not budget_raw.amount else (float(budget_raw.amount) / 100)
+                amount = None if not budget_raw.amount else (
+                    float(budget_raw.amount) / 100)
                 month = str(budget_raw.month)
                 if category not in budgets:
                     budgets[category] = Budget(
                         name=category, amounts=[], balance=Decimal(0)
                     )
-                budgets[category].amounts.append(BudgetAmount(month=month, amount=amount))
+                budgets[category].amounts.append(
+                    BudgetAmount(month=month, amount=amount))
             for category in budgets:
                 budgets[category].amounts = sorted(
                     budgets[category].amounts, key=lambda x: x.month
@@ -175,15 +177,40 @@ class ActualBudget:
             budgets_raw = get_budgets(session, None, budget_name)
             if not budgets_raw or not budgets_raw[0]:
                 raise Exception(f"budget {budget_name} not found")
-            budget: Budget = Budget(name=budget_name, amounts=[], balance=Decimal(0))
+            budget: Budget = Budget(
+                name=budget_name, amounts=[], balance=Decimal(0))
             for budget_raw in budgets_raw:
-                amount = None if not budget_raw.amount else (float(budget_raw.amount) / 100)
+                amount = None if not budget_raw.amount else (
+                    float(budget_raw.amount) / 100)
                 month = str(budget_raw.month)
                 budget.amounts.append(BudgetAmount(month=month, amount=amount))
             budget.amounts = sorted(budget.amounts, key=lambda x: x.month)
             category_data = get_category(session, budget_name)
-            budget.balance = category_data.balance if category_data else Decimal(0)
+            budget.balance = category_data.balance if category_data else Decimal(
+                0)
             return budget
+
+    async def run_bank_sync(self) -> None:
+        """Run bank synchronization."""
+        return await self.hass.async_add_executor_job(self.run_bank_sync_sync)
+
+    def run_bank_sync_sync(self) -> None:
+        with self._lock:  # Ensure only one thread enters at a time
+            self.get_session()
+
+            self.actual.sync()
+            self.actual.run_bank_sync()
+            self.actual.commit()
+
+    async def run_budget_sync(self) -> None:
+        """Run bank synchronization."""
+        return await self.hass.async_add_executor_job(self.run_budget_sync_sync)
+
+    def run_budget_sync_sync(self) -> None:
+        with self._lock:  # Ensure only one thread enters at a time
+            self.get_session()
+
+            self.actual.sync()
 
     async def test_connection(self):
         return await self.hass.async_add_executor_job(self.test_connection_sync)

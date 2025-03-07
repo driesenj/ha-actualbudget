@@ -4,10 +4,13 @@ from __future__ import annotations
 import logging
 
 from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import HomeAssistant
+from homeassistant.core import (HomeAssistant)
 from homeassistant.helpers.typing import ConfigType
 
-from .const import DOMAIN
+from .const import (
+    DOMAIN,
+)
+from .actions import register_actions
 
 __version__ = "1.1.0"
 _LOGGER = logging.getLogger(__name__)
@@ -21,6 +24,8 @@ async def async_setup(hass: HomeAssistant, config: ConfigType):
     _LOGGER.debug("Start 'async_setup'...")
 
     hass.data.setdefault(DOMAIN, {})
+
+    register_actions(hass)
 
     return True
 
